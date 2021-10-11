@@ -391,6 +391,7 @@ message CreateIndexRequest {
   string collection_name = 3; // must
   string field_name = 4; // must
   repeated common.KeyValuePair extra_params = 5; // must
+  string index_name = 6;
 }
 
 message DescribeIndexRequest {

@@ -723,7 +723,9 @@ class GrpcHandler:
         kwargs["_async"] = False
         self.flush([collection_name], timeout, **kwargs)
 
-        index_param = Prepare.create_index__request(collection_name, field_name, params)
+        index_name = kwargs.get("index_name", "")
+
+        index_param = Prepare.create_index__request(collection_name, field_name, params, index_name)
         future = self._stub.CreateIndex.future(index_param, wait_for_ready=True, timeout=timeout)
 
         if _async:
@@ -748,7 +750,7 @@ class GrpcHandler:
 
         if kwargs.get("sync", True):
             index_success, fail_reason = self.wait_for_creating_index(collection_name=collection_name,
-                                                                      field_name=field_name, timeout=timeout)
+                                                                      field_name=field_name, timeout=timeout, index_name=index_name)
             if not index_success:
                 raise BaseException(Status.UNEXPECTED_ERROR, fail_reason)
 
@@ -773,7 +775,7 @@ class GrpcHandler:
 
     @error_handler(IndexState.Failed)
     def get_index_build_progress(self, collection_name, index_name, timeout=None):
-        request = Prepare.get_index_build_progress(collection_name, index_name)
+        request = Prepare.get_index_build_progress(collection_name, field_name=None, index_name=index_name)
         rf = self._stub.GetIndexBuildProgress.future(request, wait_for_ready=True, timeout=timeout)
         response = rf.result()
         status = response.status
@@ -782,8 +784,8 @@ class GrpcHandler:
         raise BaseException(status.error_code, status.reason)
 
     @error_handler(IndexState.Failed)
-    def get_index_state(self, collection_name, field_name, timeout=None):
-        request = Prepare.get_index_state_request(collection_name, field_name)
+    def get_index_state(self, collection_name, field_name, timeout=None, index_name=None):
+        request = Prepare.get_index_state_request(collection_name, field_name, index_name)
         rf = self._stub.GetIndexState.future(request, wait_for_ready=True, timeout=timeout)
         response = rf.result()
         status = response.status
@@ -792,11 +794,11 @@ class GrpcHandler:
         raise BaseException(status.error_code, status.reason)
 
     @error_handler(False)
-    def wait_for_creating_index(self, collection_name, field_name, timeout=None):
+    def wait_for_creating_index(self, collection_name, field_name, timeout=None, index_name=None):
         start = time.time()
         while True:
             time.sleep(0.5)
-            state, fail_reason = self.get_index_state(collection_name, field_name, timeout)
+            state, fail_reason = self.get_index_state(collection_name, field_name, timeout, index_name)
             if state == IndexState.Finished:
                 return True, fail_reason
             if state == IndexState.Failed:
