@@ -1338,3 +1338,23 @@ class GrpcHandler:
             return flush_future
 
         _check()
+
+    @retry_on_rpc_failure()
+    def list_indexed_segment(self, collection_name, index_name, timeout=None, **kwargs):
+        request = Prepare.list_indexed_segments_request(collection_name, index_name)
+        future = self._stub.ListIndexedSegment.future(request, timeout=timeout)
+        response = future.result()
+        if response.status.error_code != 0:
+            raise MilvusException(response.status.error_code, response.status.reason)
+
+        return list(response.segmentIDs)
+
+    @retry_on_rpc_failure()
+    def describe_segment_index_data(self, collection_name, index_name, segment_ids, timeout=None, **kwargs):
+        request = Prepare.describe_segment_index_data_request(collection_name, index_name, segment_ids)
+        future = self._stub.DescribeSegmentIndexData.future(request, timeout=timeout)
+        response = future.result()
+        if response.status.error_code != 0:
+            raise MilvusException(response.status.error_code, response.status.reason)
+
+        return response

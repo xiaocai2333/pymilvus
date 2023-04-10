@@ -270,3 +270,6 @@ class SearchResult:
 
     def on_result(self, res):
         return Hits(res)
+
+    def get_visitor_view(self):
+        return self._qs.get_visitor_views()

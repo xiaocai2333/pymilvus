@@ -1064,3 +1064,11 @@ def flush_all(using="default", timeout=None, **kwargs):
         >>> future.done() # flush_all finished
     """
     return _get_connection(using).flush_all(timeout=timeout, **kwargs)
+
+
+def list_indexed_segment(collection_name, index_name="", using="default"):
+    return _get_connection(using).list_indexed_segment(collection_name, index_name)
+
+
+def describe_segment_index_data(collection_name, segment_ids, index_name="", using="default", **kwargs):
+    return _get_connection(using).describe_segment_index_data(collection_name, index_name, segment_ids, **kwargs)

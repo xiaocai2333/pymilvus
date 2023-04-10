@@ -16,6 +16,7 @@ from ..orm.schema import CollectionSchema
 from ..grpc_gen import common_pb2 as common_types
 from ..grpc_gen import schema_pb2 as schema_types
 from ..grpc_gen import milvus_pb2 as milvus_types
+from ..grpc_gen import feder_pb2 as feder_types
 
 
 class Prepare:
@@ -441,6 +442,7 @@ class Prepare:
             "round_decimal": round_decimal,
             "offset": param.get("offset", 0),
             "ignore_growing": ignore_growing,
+            "tracedSegments": param.get("tracedSegments", [])
         }
 
         def dump(v):
@@ -832,3 +834,13 @@ class Prepare:
     @classmethod
     def get_flush_all_state_request(cls, flush_all_ts):
         return milvus_types.GetFlushAllStateRequest(flush_all_ts=flush_all_ts)
+
+    @classmethod
+    def list_indexed_segments_request(cls, collection_name, index_name):
+        return feder_types.ListIndexedSegmentRequest(collection_name=collection_name, index_name=index_name)
+
+    @classmethod
+    def describe_segment_index_data_request(cls, collection_name, index_name, segment_ids):
+        return feder_types.DescribeSegmentIndexDataRequest(collection_name=collection_name,
+                                                           index_name=index_name,
+                                                           segmentsIDs=segment_ids)

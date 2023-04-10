@@ -477,6 +477,7 @@ class ChunkedQueryResult(LoopBase):
             nq = raw.results.num_queries
             self._nq += nq
             self._topk = raw.results.top_k
+            self._traced_segment = raw.results.visitor_views
             offset = 0
             for i in range(nq):
                 hit = schema_pb2.SearchResultData()
@@ -522,6 +523,9 @@ class ChunkedQueryResult(LoopBase):
 
     def get__item(self, item):
         return Hits(self._hits[item], self._auto_id, self.round_decimal)
+
+    def get_visitor_views(self):
+        return self._traced_segment
 
 
 def _abstract():
