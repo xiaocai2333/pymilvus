@@ -676,6 +676,10 @@ class Prepare:
         nq = entity_helper.get_input_num_rows(data)
         plg_str = cls._prepare_placeholder_str(data)
 
+        enable_partial_search = kwargs.get("enable_partial_search", False)
+        min_result_threshold = kwargs.get("min_result_threshold", None)
+        check_time = kwargs.get("check_time", None)
+
         request = milvus_types.SearchRequest(
             collection_name=collection_name,
             partition_names=partition_names,
@@ -687,6 +691,9 @@ class Prepare:
             placeholder_group=plg_str,
             dsl_type=common_types.DslType.BoolExprV1,
             search_params=req_params,
+            enable_partial_search=enable_partial_search,
+            min_result_threshold=min_result_threshold,
+            check_time=check_time,
         )
         if expr is not None:
             request.dsl = expr
