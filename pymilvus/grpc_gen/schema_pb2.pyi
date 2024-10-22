@@ -32,6 +32,7 @@ class FunctionType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     Unknown: _ClassVar[FunctionType]
     BM25: _ClassVar[FunctionType]
+    OpenAIEmbedding: _ClassVar[FunctionType]
 
 class FieldState(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -58,6 +59,7 @@ BFloat16Vector: DataType
 SparseFloatVector: DataType
 Unknown: FunctionType
 BM25: FunctionType
+OpenAIEmbedding: FunctionType
 FieldCreated: FieldState
 FieldCreating: FieldState
 FieldDropping: FieldState
