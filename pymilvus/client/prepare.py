@@ -678,11 +678,19 @@ class Prepare:
         param_name = kwargs.get("param_name", "expr")
         check_str(expr, param_name)
 
+        expr_params = kwargs.get("expr_params", {})
+        expression_values = []
+        for k, v in expr_params.items():
+            field_data = cls.prepare_expression_template(v)
+            field_data.name = k
+            expression_values.append(field_data)
+
         return milvus_types.DeleteRequest(
             collection_name=collection_name,
             partition_name=partition_name,
             expr=expr,
             consistency_level=get_consistency_level(consistency_level),
+            expression_values=expression_values,
         )
 
     @classmethod
@@ -725,6 +733,68 @@ class Prepare:
         return common_types.PlaceholderGroup.SerializeToString(
             common_types.PlaceholderGroup(placeholders=[pl])
         )
+
+    @classmethod
+    def prepare_expression_template(cls, value: Any) -> Any:
+        from pymilvus.orm.types import infer_dtype_by_scalar_data
+
+        field_data = schema_types.FieldData()
+
+        def add_data(dtype: schema_types.DataType, v: Any):
+            data = schema_types.ScalarField()
+            if dtype in (schema_types.Bool,):
+                data.bool_data.data.extend(v)
+                return data, schema_types.Bool
+            if dtype in (
+                schema_types.Int8,
+                schema_types.Int16,
+                schema_types.Int32,
+                schema_types.Int64,
+            ):
+                data.long_data.data.extend(v)
+                return data, schema_types.Int64
+            if dtype in (schema_types.Float, schema_types.Double):
+                data.double_data.data.extend(v)
+                return data, schema_types.Double
+            if dtype in (schema_types.VarChar, schema_types.String):
+                data.string_data.data.extend(v)
+                return data, schema_types.VarChar
+            raise ParamError(message=f"Unsupported element type: {dtype}")
+
+        def get_element_type(v: Any) -> schema_types.DataType:
+            element_types = {infer_dtype_by_scalar_data(element) for element in v}
+            if len(element_types) == 1:
+                return element_types.pop()
+            return schema_types.JSON
+
+        def add_array_data(v: Any):
+            element_type = get_element_type(v)
+            if element_type in (schema_types.Array,):
+                element_datas = schema_types.ScalarField()
+                for element in value:
+                    rdata, rtype = add_array_data(element)
+                    element_datas.array_data.data.append(rdata)
+                    element_datas.array_data.element_type = rtype
+                return element_datas, schema_types.Array
+            if element_type in (schema_types.JSON,):
+                element_datas = schema_types.ScalarField()
+                for element in value:
+                    element_datas.json_data.data.append(entity_helper.convert_to_json(element))
+                return element_datas, schema_types.JSON
+            return add_data(element_type, v)
+
+        if isinstance(value, list):
+            data, etype = add_array_data(value)
+            field_data.scalars.array_data.data.append(data)
+            field_data.scalars.array_data.element_type = etype
+            field_data.type = schema_types.Array
+        else:
+            data_type = infer_dtype_by_scalar_data(value)
+            rdata, rtype = add_data(data_type, [value])
+            field_data.scalars.CopyFrom(rdata)
+            field_data.type = rtype
+
+        return field_data
 
     @classmethod
     def search_requests_with_expr(
@@ -813,6 +883,14 @@ class Prepare:
         )
         if expr is not None:
             request.dsl = expr
+
+        expr_params = kwargs.get("expr_params", {})
+        expression_values = []
+        for k, v in expr_params.items():
+            field_data = cls.prepare_expression_template(v)
+            field_data.field_name = k
+            expression_values.append(field_data)
+        request.expression_values.extend(expression_values)
 
         return request
 
@@ -1069,6 +1147,13 @@ class Prepare:
         req.query_params.append(
             common_types.KeyValuePair(key=REDUCE_STOP_FOR_BEST, value=str(stop_reduce_for_best))
         )
+        expr_params = kwargs.get("expr_params", {})
+        expression_values = []
+        for k, v in expr_params.items():
+            field_data = cls.prepare_expression_template(v)
+            field_data.name = k
+            expression_values.append(field_data)
+        req.expression_values.extend(expression_values)
         return req
 
     @classmethod
