@@ -26,6 +26,7 @@ from . import __version__, blob, check, entity_helper, utils
 from .abstract import BaseRanker
 from .check import check_pass_param, is_legal_collection_properties, validate_str
 from .constants import (
+    CLUSTER_ID,
     COLLECTION_ID,
     DEFAULT_CONSISTENCY_LEVEL,
     DYNAMIC_FIELD_NAME,
@@ -69,6 +70,18 @@ _JSON_TYPE_MAP = {
 
 
 _STRUCT_FIELD_RE = re.compile(r"^(.+)\[(.+)\]$")
+
+
+def _get_dql_cluster_id(kwargs: Dict) -> Optional[str]:
+    option = kwargs.get("option")
+    if not isinstance(option, Mapping):
+        return None
+
+    cluster_id = option.get(CLUSTER_ID)
+    if cluster_id is None:
+        return None
+    return str(cluster_id)
+
 
 # Maps DataType to (regular PlaceholderType, EmbeddingList PlaceholderType) for bytes input
 _BYTES_PH_MAP = {
@@ -1544,6 +1557,10 @@ class Prepare:
         if collection_id is not None:
             search_params[COLLECTION_ID] = str(collection_id)
 
+        cluster_id = _get_dql_cluster_id(kwargs)
+        if cluster_id is not None:
+            search_params[CLUSTER_ID] = cluster_id
+
         is_search_iter_v2 = kwargs.get(ITER_SEARCH_V2_KEY)
         if is_search_iter_v2 is not None:
             search_params[ITER_SEARCH_V2_KEY] = is_search_iter_v2
@@ -1749,6 +1766,12 @@ class Prepare:
                 for key, value in rerank_param.items()
             ]
         )
+
+        cluster_id = _get_dql_cluster_id(kwargs)
+        if cluster_id is not None:
+            request.rank_params.append(
+                common_types.KeyValuePair(key=CLUSTER_ID, value=cluster_id)
+            )
 
         for param_key in (RANK_GROUP_SCORER, GROUP_BY_FIELD, GROUP_SIZE, STRICT_GROUP_SIZE):
             val = kwargs.get(param_key)
@@ -2092,6 +2115,10 @@ class Prepare:
             req.query_params.append(
                 common_types.KeyValuePair(key=COLLECTION_ID, value=str(collection_id))
             )
+
+        cluster_id = _get_dql_cluster_id(kwargs)
+        if cluster_id is not None:
+            req.query_params.append(common_types.KeyValuePair(key=CLUSTER_ID, value=cluster_id))
 
         limit = kwargs.get("limit")
         if limit is not None:

@@ -19,6 +19,10 @@ class TestSearchRequestsWithExpr:
         """Basic search parameters."""
         return {"metric_type": "L2", "params": {"nprobe": 10}}
 
+    @staticmethod
+    def _kv_map(params):
+        return {kv.key: kv.value for kv in params}
+
     def test_search_with_data(self, basic_search_params):
         """Test search with vector data."""
         data = [[1.0, 2.0, 3.0, 4.0]]
@@ -43,6 +47,19 @@ class TestSearchRequestsWithExpr:
         )
         assert req.collection_name == "test"
         assert req.nq == 3
+
+    def test_search_includes_cluster_id_from_option(self, basic_search_params):
+        """Test search forwards option.cluster_id through search_params."""
+        req = Prepare.search_requests_with_expr(
+            collection_name="test",
+            data=[[1.0, 2.0]],
+            anns_field="vector",
+            param=basic_search_params,
+            limit=10,
+            option={"cluster_id": "cluster-a"},
+        )
+
+        assert self._kv_map(req.search_params)["cluster_id"] == "cluster-a"
 
     def test_search_neither_data_nor_ids(self, basic_search_params):
         """Test search without data or ids raises error."""
@@ -797,6 +814,19 @@ class TestHybridSearchRequest:
         )
         assert req.function_score is not None
 
+    def test_hybrid_search_includes_cluster_id_from_option(self):
+        """Test hybrid search forwards option.cluster_id through rank_params."""
+        req = Prepare.hybrid_search_request_with_ranker(
+            collection_name="test",
+            reqs=[],
+            rerank=None,
+            limit=10,
+            option={"cluster_id": "cluster-a"},
+        )
+
+        rank_params = {kv.key: kv.value for kv in req.rank_params}
+        assert rank_params["cluster_id"] == "cluster-a"
+
     def test_hybrid_search_invalid_ranker(self):
         """Test hybrid search with invalid ranker type."""
         with pytest.raises(ParamError, match="must be a Function or a Ranker"):
@@ -841,6 +871,19 @@ class TestQueryRequest:
         )
         assert req.collection_name == "test"
         assert req.expr == "id > 0"
+
+    def test_query_includes_cluster_id_from_option(self):
+        """Test query forwards option.cluster_id through query_params."""
+        req = Prepare.query_request(
+            collection_name="test",
+            expr="id > 0",
+            output_fields=["id"],
+            partition_names=[],
+            option={"cluster_id": "cluster-a"},
+        )
+
+        query_params = {kv.key: kv.value for kv in req.query_params}
+        assert query_params["cluster_id"] == "cluster-a"
 
     @pytest.mark.parametrize(
         "query_params",
