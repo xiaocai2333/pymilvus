@@ -26,6 +26,7 @@ from . import __version__, blob, check, entity_helper, utils
 from .abstract import BaseRanker
 from .check import check_pass_param, is_legal_collection_properties, validate_str
 from .constants import (
+    CLUSTER_ID,
     COLLECTION_ID,
     DEFAULT_CONSISTENCY_LEVEL,
     DYNAMIC_FIELD_NAME,
@@ -43,6 +44,8 @@ from .constants import (
     ORDER_BY_FIELDS,
     PAGE_RETAIN_ORDER_FIELD,
     QUERY_GROUP_BY_FIELDS,
+    QUERY_ITER_LAST_ELEMENT_OFFSET,
+    QUERY_ITER_LAST_PK,
     RANK_GROUP_SCORER,
     REDUCE_STOP_FOR_BEST,
     SEARCH_AGGREGATION,
@@ -1548,6 +1551,10 @@ class Prepare:
         if collection_id is not None:
             search_params[COLLECTION_ID] = str(collection_id)
 
+        cluster_id = kwargs.get(CLUSTER_ID)
+        if cluster_id is not None:
+            search_params[CLUSTER_ID] = str(cluster_id)
+
         is_search_iter_v2 = kwargs.get(ITER_SEARCH_V2_KEY)
         if is_search_iter_v2 is not None:
             search_params[ITER_SEARCH_V2_KEY] = is_search_iter_v2
@@ -1779,6 +1786,12 @@ class Prepare:
                         value=val if param_key == RANK_GROUP_SCORER else utils.dumps(val),
                     )
                 )
+
+        cluster_id = kwargs.get(CLUSTER_ID)
+        if cluster_id is not None:
+            request.rank_params.append(
+                common_types.KeyValuePair(key=CLUSTER_ID, value=str(cluster_id))
+            )
 
         if isinstance(rerank, Function):
             request.function_score.CopyFrom(Prepare.ranker_to_function_score(rerank))
@@ -2113,6 +2126,12 @@ class Prepare:
                 common_types.KeyValuePair(key=COLLECTION_ID, value=str(collection_id))
             )
 
+        cluster_id = kwargs.get(CLUSTER_ID)
+        if cluster_id is not None:
+            req.query_params.append(
+                common_types.KeyValuePair(key=CLUSTER_ID, value=str(cluster_id))
+            )
+
         limit = kwargs.get("limit")
         if limit is not None:
             req.query_params.append(common_types.KeyValuePair(key="limit", value=str(limit)))
@@ -2135,6 +2154,20 @@ class Prepare:
         if is_iterator is not None:
             req.query_params.append(
                 common_types.KeyValuePair(key=ITERATOR_FIELD, value=is_iterator)
+            )
+
+        query_iter_last_pk = kwargs.get(QUERY_ITER_LAST_PK)
+        query_iter_last_element_offset = kwargs.get(QUERY_ITER_LAST_ELEMENT_OFFSET)
+        if query_iter_last_pk is not None:
+            req.query_params.append(
+                common_types.KeyValuePair(key=QUERY_ITER_LAST_PK, value=str(query_iter_last_pk))
+            )
+        if query_iter_last_element_offset is not None:
+            req.query_params.append(
+                common_types.KeyValuePair(
+                    key=QUERY_ITER_LAST_ELEMENT_OFFSET,
+                    value=str(query_iter_last_element_offset),
+                )
             )
 
         req.query_params.append(
